@@ -39,35 +39,83 @@ function updateThemeIcon(){
 // ══════════════════════════════════════════════
 const OPEN_DATE=new Date('2026-03-16T00:00:00Z');
 const CLOSE_DATE=new Date('2026-04-08T18:00:00Z');
+
+// Index.html timeline countdown uses different element IDs than the legacy
+// countdown banner.
+// This function now supports both:
+// 1) legacy: #countdownBanner, #countdownSub, #cdDays/#cdHours/#cdMins/#cdSecs
+// 2) index:  #countdown-label and #countdown
 function updateCountdown(){
   const now=Date.now();
-  const banner=document.getElementById('countdownBanner');
-  const sub=document.getElementById('countdownSub');
+
+  const legacyBanner=document.getElementById('countdownBanner');
+  const legacySub=document.getElementById('countdownSub');
+
+  const timelineLabel=document.getElementById('countdown-label');
+  const timelineEl=document.getElementById('countdown');
+
+  // If neither set exists, do nothing.
+  if(!legacyBanner && !timelineEl) return;
+
   let target=OPEN_DATE.getTime();
   let label='📅 GSoC 2026 Applications Open In';
   let subText='Until March 16, 2026';
+
   if(now>=OPEN_DATE.getTime()&&now<CLOSE_DATE.getTime()){
     target=CLOSE_DATE.getTime();
     label='🚀 Applications Are Open — Closes In';
     subText='Until April 8, 2026';
-    banner.style.background='linear-gradient(135deg,rgba(0,135,90,.07),rgba(0,135,90,.12))';
-    banner.style.borderBottomColor='rgba(0,135,90,.3)';
-    banner.style.color='var(--green)';
+
+    // legacy banner styles (only if banner exists)
+    if(legacyBanner){
+      legacyBanner.style.background='linear-gradient(135deg,rgba(0,135,90,.07),rgba(0,135,90,.12))';
+      legacyBanner.style.borderBottomColor='rgba(0,135,90,.3)';
+      legacyBanner.style.color='var(--green)';
+    }
+
   } else if(now>=CLOSE_DATE.getTime()){
-    banner.innerHTML='<span>🎉 GSoC 2026 applications have closed. Stay tuned for accepted orgs!</span>';
-    clearInterval(cdTimer);return;
+    if(legacyBanner){
+      legacyBanner.innerHTML='<span>🎉 GSoC 2026 applications have closed. Stay tuned for accepted orgs!</span>';
+      clearInterval(cdTimer);
+    }
+    if(timelineLabel) timelineLabel.textContent='GSoC 2026 selection complete';
+    if(timelineEl){
+      timelineEl.textContent='🎉 All done!';
+      timelineEl.classList.remove('text-primary');
+      timelineEl.classList.add('text-green-600');
+    }
+    return;
   }
+
   const diff=Math.max(0,target-now);
   const d=Math.floor(diff/86400000);
   const h=Math.floor((diff%86400000)/3600000);
   const m=Math.floor((diff%3600000)/60000);
   const s=Math.floor((diff%60000)/1000);
-  document.getElementById('cdDays').textContent=String(d).padStart(2,'0');
-  document.getElementById('cdHours').textContent=String(h).padStart(2,'0');
-  document.getElementById('cdMins').textContent=String(m).padStart(2,'0');
-  document.getElementById('cdSecs').textContent=String(s).padStart(2,'0');
-  sub.textContent=subText;
-  banner.querySelector('.countdown-label').textContent=label;
+
+  // Legacy ids (if present)
+  const elDays=document.getElementById('cdDays');
+  const elHours=document.getElementById('cdHours');
+  const elMins=document.getElementById('cdMins');
+  const elSecs=document.getElementById('cdSecs');
+  if(elDays) elDays.textContent=String(d).padStart(2,'0');
+  if(elHours) elHours.textContent=String(h).padStart(2,'0');
+  if(elMins) elMins.textContent=String(m).padStart(2,'0');
+  if(elSecs) elSecs.textContent=String(s).padStart(2,'0');
+
+  if(legacySub) legacySub.textContent=subText;
+  if(legacyBanner){
+    const cdLabel=legacyBanner.querySelector('.countdown-label');
+    if(cdLabel) cdLabel.textContent=label;
+  }
+
+  // Index.js timeline ids
+  if(timelineLabel && timelineEl){
+    timelineLabel.textContent=`Until: ${CLOSE_DATE.getTime()===target ? 'Applications close' : 'Applications open'}`;
+    timelineEl.textContent=`${d}d ${h}h ${m}m`;
+    timelineEl.classList.remove('text-green-600');
+    timelineEl.classList.add('text-primary');
+  }
 }
 updateCountdown();
 const cdTimer=setInterval(updateCountdown,1000);
@@ -518,12 +566,22 @@ function orgMatchesLanguages(org, selectedLanguages) {
 }
 
 function applyFilters(){
-  const search = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
+  // const search = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
+  const search = (document.getElementById('hero-search')?.value || '').trim().toLowerCase();
   const categoryValue = document.getElementById('categoryFilter')?.value || '';
   const cat = categoryValue === 'all' ? '' : categoryValue;
   const lang = document.getElementById('langFilter')?.value?.toLowerCase() || '';
   const compF = document.getElementById('complexityFilter')?.value || '';
   const sort = document.getElementById('sortSelect')?.value || 'alpha';
+
+//   let timer;
+
+// document.getElementById('hero-search').addEventListener('input', () => {
+//   clearTimeout(timer);
+//   timer = setTimeout(() => {
+//     applyFilters();
+//   }, 150);
+// });
 
   if(search!==lastSearch&&search.length>1){AN.trackSearch(search);lastSearch=search;}
   if(cat)AN.trackCat(cat);
@@ -531,6 +589,7 @@ function applyFilters(){
   const res=ORGS.filter(o=>{
     // Search only organization names
     const orgName=o.name.toLowerCase();
+    
     
     // Category Filter
     if(cat && o.cat !== cat) return false;
@@ -587,6 +646,7 @@ function applyFilters(){
       // Neither starts with, sort by selected sort option or alphabetically
       return applySecondarySort(a, b, sort);
     });
+    if (matchAllLanguages)
   }
 
 
@@ -610,6 +670,14 @@ function applyFilters(){
   if (sort && sort !== 'alpha')    params.set('sort',sort);
   history.replaceState(null,'',params.toString()?'?'+params.toString():location.pathname);
 }
+  let timer;
+
+document.getElementById('hero-search').addEventListener('input', () => {
+  clearTimeout(timer);
+  timer = setTimeout(() => {
+    applyFilters();
+  }, 150);
+});
 
 function applySecondarySort(a, b, sortType) {
   if(sortType==='years-desc') return b.years - a.years;
@@ -835,7 +903,7 @@ document.addEventListener('keydown',e=>{
     toggleCompare(ORGS.indexOf(filteredOrgs[focusedIdx]),null);
   } else if (e.key === '/' && !['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName)) {
     e.preventDefault();
-    document.getElementById('searchInput').focus();
+    document.getElementById('hero-search').focus();
   }
 });
 

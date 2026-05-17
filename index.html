@@ -659,7 +659,7 @@
 <section id="orgs" class="px-6 max-w-7xl mx-auto pb-20">
   <div class="flex items-center justify-between mb-8">
     <p class="font-label text-xs uppercase tracking-widest text-zinc-500">Showing <strong id="orgCount">184</strong> of 184 organizations</p>
-    <div class="flex items-center gap-4">
+    < class="flex items-center gap-4">
       <select id="categoryFilter" class="bg-surface-container-low border-none rounded-xl text-xs font-bold focus:ring-0 cursor-pointer text-zinc-600">
         <option value="all">Categories: All</option>
         <option value="web">Web</option>
@@ -690,7 +690,7 @@
   </div>
   
   <!-- Hidden search input for JavaScript compatibility -->
-  <input type="hidden" id="searchInput" />
+  <!-- <input type="hidden" id="searchInput" /> -->
   
   <div class="org-grid grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6" id="orgGrid">
     <!-- Organizations will be rendered here dynamically -->
@@ -941,9 +941,9 @@
 
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
     <article class="bg-white border border-zinc-100 rounded-3xl p-8 shadow-sm">
-      <h3 class="text-xl font-bold mb-3">1) Open Source Basics</h3>
+      <h3 class="text-xl font-bold mb-3">1. Open Source Basics</h3>
       <p class="text-sm text-zinc-600 mb-4 leading-relaxed">Open source projects publish source code publicly so anyone can inspect, improve, and share it. Contribution usually starts with reading contribution guidelines and making small, focused changes.</p>
-      <ul class="space-y-2 text-sm text-zinc-700 list-disc pl-5">
+<ul class="space-y-2 text-sm text-zinc-700 list-disc pl-5 marker:text-zinc-700">
         <li>Understand how licensing and collaboration work.</li>
         <li>Start with documentation or beginner-friendly issues.</li>
         <li>Communicate early through issues and PR comments.</li>
@@ -952,7 +952,7 @@
 
     <article class="bg-white border border-zinc-100 rounded-3xl p-8 shadow-sm">
       <h3 class="text-xl font-bold mb-3">2) Contribute to a GSoC Organization</h3>
-      <ol class="space-y-2 text-sm text-zinc-700 list-decimal pl-5">
+<ol class="space-y-2 text-sm text-zinc-700 list-decimal pl-5 marker:text-zinc-700">
         <li>Pick 2–3 organizations that match your skills and interests.</li>
         <li>Read their ideas page, contribution guide, and communication channels.</li>
         <li>Set up the project locally and start with a small issue or documentation task.</li>
@@ -1952,17 +1952,21 @@
   }
 
   // Countdown to the next upcoming milestone
-  function updateCountdown() {
+function updateCountdown() {
     const countdownEl = document.getElementById('countdown');
     const labelEl = document.getElementById('countdown-label');
     if (!countdownEl || !labelEl || MILESTONES.length === 0) return;
 
     try {
       const now = new Date();
-      if (isNaN(now.getTime())) return;
+      if (isNaN(now.getTime())) {
+        countdownEl.textContent = '—';
+        return;
+      }
 
       const next = MILESTONES.find(m => m.date > now);
 
+      // If we can’t find a future milestone, don’t leave the placeholder.
       if (!next) {
         labelEl.textContent = 'GSoC 2026 selection complete';
         countdownEl.textContent = '🎉 All done!';
@@ -1974,12 +1978,23 @@
       labelEl.textContent = `Until: ${next.label}`;
       countdownEl.classList.remove('text-green-600');
       countdownEl.classList.add('text-primary');
+
       const diff = next.date - now;
-      if (diff <= 0) { renderTimeline(); updateCountdown(); return; }
-      const d = Math.floor(diff / 864e5), h = Math.floor((diff % 864e5) / 36e5), m = Math.floor((diff % 36e5) / 6e4);
+      if (diff <= 0) {
+        renderTimeline();
+        updateCountdown();
+        return;
+      }
+
+      const d = Math.floor(diff / 864e5);
+      const h = Math.floor((diff % 864e5) / 36e5);
+      const m = Math.floor((diff % 36e5) / 6e4);
       countdownEl.textContent = `${d}d ${h}h ${m}m`;
     } catch (err) {
       console.warn('[Timeline] updateCountdown failed:', err);
+      // Ensure the UI never stays stuck on the placeholder.
+      const countdownEl = document.getElementById('countdown');
+      if (countdownEl) countdownEl.textContent = '—';
     }
   }
 
@@ -2501,9 +2516,16 @@ if(org.ideas){
   if (heroSearch) {
     heroSearch.value = document.getElementById('searchInput')?.value || new URLSearchParams(location.search).get('q') || '';
     heroSearch.addEventListener('input', (e) => {
+      // Keep search text in sync, but do not force "results scrolling" on each keystroke.
       document.getElementById('searchInput').value = e.target.value;
-      document.getElementById('orgs').scrollIntoView({ behavior: 'smooth' });
-      applyFilters();
+      // Results are updated on Enter (see keydown handler below).
+    });
+
+    heroSearch.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        applyFilters();
+      }
     });
   }
 
