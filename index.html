@@ -3604,13 +3604,19 @@ if(org.ideas){
     renderOrgs(true);
   };
 
-  document.getElementById('searchInput').addEventListener('input', () => {
+document.getElementById('searchInput').addEventListener('input', () => {
     // Track search badge when user types a search query
     const query = document.getElementById('searchInput').value.trim();
     if (typeof BadgeSystem !== 'undefined' && query.length > 0) {
       BadgeSystem.trackSearch();
     }
-    applyFilters();
+
+    // Debounce to avoid rerendering the entire grid on every keystroke.
+    // This prevents unexpected page jump/scroll while typing.
+    if (window.__searchInputDebounceTimer) clearTimeout(window.__searchInputDebounceTimer);
+    window.__searchInputDebounceTimer = setTimeout(() => {
+      applyFilters();
+    }, 300);
   });
   document.getElementById('categoryFilter').addEventListener('change', () => {
     // Track filter badge when user changes category
@@ -3653,16 +3659,21 @@ if(org.ideas){
   const heroSearch = document.getElementById('hero-search');
   if (heroSearch) {
     heroSearch.value = document.getElementById('searchInput')?.value || new URLSearchParams(location.search).get('q') || '';
-    heroSearch.addEventListener('input', (e) => {
+heroSearch.addEventListener('input', (e) => {
       document.getElementById('searchInput').value = e.target.value;
-      document.getElementById('orgs').scrollIntoView({ behavior: 'smooth' });
       
       // Track search badge when user types in hero search
       const query = e.target.value.trim();
       if (typeof BadgeSystem !== 'undefined' && query.length > 0) {
         BadgeSystem.trackSearch();
       }
-      applyFilters();
+
+      // Debounce to avoid rerendering the entire grid on every keystroke.
+      // This prevents unexpected page jump/scroll while typing.
+      if (window.__heroSearchDebounceTimer) clearTimeout(window.__heroSearchDebounceTimer);
+      window.__heroSearchDebounceTimer = setTimeout(() => {
+        applyFilters();
+      }, 300);
     });
   }
 
